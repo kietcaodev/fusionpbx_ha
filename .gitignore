@@ -1,0 +1,25 @@
+# Sensitive configuration files
+config.txt
+step.txt
+
+# Log files
+*.log
+*.status
+
+# Backup files
+*.bak
+*~
+
+# System files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.temp
