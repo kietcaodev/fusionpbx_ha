@@ -268,10 +268,12 @@ if [ ! -d "/var/log/lsyncd" ] ;then
     touch /var/log/lsyncd/lsyncd.{log,status}
 fi
 
+echo -e "Creating lsyncd config on Master node (sync to Standby)..."
 cat > /etc/lsyncd/lsyncd.conf.lua << EOF
 ----
 -- User configuration file for lsyncd.
 -- FusionPBX HA Configuration - Full Sync
+-- Node: Master ($ip_master) -> Standby ($ip_standby)
 --
 settings {
     logfile = "/var/log/lsyncd/lsyncd.log",
@@ -522,9 +524,276 @@ sync {
 
 EOF
 
+echo -e "Creating lsyncd config on Standby node (sync to Master)..."
 ssh root@$ip_standby "mkdir -p /etc/lsyncd/"
 ssh root@$ip_standby "mkdir -p /var/log/lsyncd/"
-scp /etc/lsyncd/lsyncd.conf.lua root@$ip_standby:/etc/lsyncd/lsyncd.conf.lua
+ssh root@$ip_standby "touch /var/log/lsyncd/lsyncd.log"
+ssh root@$ip_standby "touch /var/log/lsyncd/lsyncd.status"
+
+# Create DIFFERENT config for Standby node - sync back to Master
+cat > /tmp/lsyncd_standby.conf.lua << 'EOFSTANDBY'
+----
+-- User configuration file for lsyncd.
+-- FusionPBX HA Configuration - Full Sync
+-- Node: Standby -> Master
+--
+settings {
+    logfile = "/var/log/lsyncd/lsyncd.log",
+    statusFile = "/var/log/lsyncd/lsyncd.status",
+    statusInterval = 20,
+    inotifyMode = "CloseWrite",
+}
+
+-- Sync /etc/freeswitch directory
+sync {
+    default.rsync,
+    source = "/etc/freeswitch",
+    target = "root@IP_MASTER:/etc/freeswitch",
+    rsync = {
+        archive = true,
+        compress = true,
+        verbose = true,
+        whole_file = false,
+    },
+    delay = 15,
+    maxProcesses = 1,
+}
+
+-- Sync /etc/default/freeswitch
+sync {
+    default.rsync,
+    source = "/etc/default/freeswitch",
+    target = "root@IP_MASTER:/etc/default/freeswitch",
+    rsync = {
+        archive = true,
+        compress = true,
+        verbose = true,
+        whole_file = false,
+    },
+    delay = 15,
+    maxProcesses = 1,
+}
+
+-- Sync /var/lib/freeswitch directory
+sync {
+    default.rsync,
+    source = "/var/lib/freeswitch",
+    target = "root@IP_MASTER:/var/lib/freeswitch",
+    rsync = {
+        archive = true,
+        compress = true,
+        verbose = true,
+        whole_file = false,
+    },
+    delay = 15,
+    maxProcesses = 1,
+}
+
+-- Sync /var/log/freeswitch directory
+sync {
+    default.rsync,
+    source = "/var/log/freeswitch",
+    target = "root@IP_MASTER:/var/log/freeswitch",
+    rsync = {
+        archive = true,
+        compress = true,
+        verbose = true,
+        whole_file = false,
+    },
+    delay = 15,
+    maxProcesses = 1,
+}
+
+-- Sync /usr/lib/freeswitch directory
+sync {
+    default.rsync,
+    source = "/usr/lib/freeswitch",
+    target = "root@IP_MASTER:/usr/lib/freeswitch",
+    rsync = {
+        archive = true,
+        compress = true,
+        verbose = true,
+        whole_file = false,
+    },
+    delay = 15,
+    maxProcesses = 1,
+}
+
+-- Sync /usr/bin/freeswitch
+sync {
+    default.rsync,
+    source = "/usr/bin/freeswitch",
+    target = "root@IP_MASTER:/usr/bin/freeswitch",
+    rsync = {
+        archive = true,
+        compress = true,
+        verbose = true,
+        whole_file = false,
+    },
+    delay = 15,
+    maxProcesses = 1,
+}
+
+-- Sync /usr/share/freeswitch directory
+sync {
+    default.rsync,
+    source = "/usr/share/freeswitch",
+    target = "root@IP_MASTER:/usr/share/freeswitch",
+    rsync = {
+        archive = true,
+        compress = true,
+        verbose = true,
+        whole_file = false,
+    },
+    delay = 15,
+    maxProcesses = 1,
+}
+
+-- Sync /usr/include/freeswitch directory
+sync {
+    default.rsync,
+    source = "/usr/include/freeswitch",
+    target = "root@IP_MASTER:/usr/include/freeswitch",
+    rsync = {
+        archive = true,
+        compress = true,
+        verbose = true,
+        whole_file = false,
+    },
+    delay = 15,
+    maxProcesses = 1,
+}
+
+-- Sync /run/freeswitch directory
+sync {
+    default.rsync,
+    source = "/run/freeswitch",
+    target = "root@IP_MASTER:/run/freeswitch",
+    rsync = {
+        archive = true,
+        compress = true,
+        verbose = true,
+        whole_file = false,
+    },
+    delay = 15,
+    maxProcesses = 1,
+}
+
+-- Sync /etc/fusionpbx directory
+sync {
+    default.rsync,
+    source = "/etc/fusionpbx",
+    target = "root@IP_MASTER:/etc/fusionpbx",
+    rsync = {
+        archive = true,
+        compress = true,
+        verbose = true,
+        whole_file = false,
+    },
+    delay = 15,
+    maxProcesses = 1,
+}
+
+-- Sync /var/www/fusionpbx directory
+sync {
+    default.rsync,
+    source = "/var/www/fusionpbx",
+    target = "root@IP_MASTER:/var/www/fusionpbx",
+    rsync = {
+        archive = true,
+        compress = true,
+        verbose = true,
+        whole_file = false,
+    },
+    delay = 15,
+    maxProcesses = 1,
+}
+
+-- Sync /var/cache/fusionpbx directory
+sync {
+    default.rsync,
+    source = "/var/cache/fusionpbx",
+    target = "root@IP_MASTER:/var/cache/fusionpbx",
+    rsync = {
+        archive = true,
+        compress = true,
+        verbose = true,
+        whole_file = false,
+    },
+    delay = 15,
+    maxProcesses = 1,
+}
+
+-- Sync /var/backups/fusionpbx directory
+sync {
+    default.rsync,
+    source = "/var/backups/fusionpbx",
+    target = "root@IP_MASTER:/var/backups/fusionpbx",
+    rsync = {
+        archive = true,
+        compress = true,
+        verbose = true,
+        whole_file = false,
+    },
+    delay = 15,
+    maxProcesses = 1,
+}
+
+-- Sync /run/fusionpbx directory
+sync {
+    default.rsync,
+    source = "/run/fusionpbx",
+    target = "root@IP_MASTER:/run/fusionpbx",
+    rsync = {
+        archive = true,
+        compress = true,
+        verbose = true,
+        whole_file = false,
+    },
+    delay = 15,
+    maxProcesses = 1,
+}
+
+-- Sync /etc/nginx/sites-enabled/fusionpbx
+sync {
+    default.rsync,
+    source = "/etc/nginx/sites-enabled/fusionpbx",
+    target = "root@IP_MASTER:/etc/nginx/sites-enabled/fusionpbx",
+    rsync = {
+        archive = true,
+        compress = true,
+        verbose = true,
+        whole_file = false,
+    },
+    delay = 15,
+    maxProcesses = 1,
+}
+
+-- Sync /etc/nginx/sites-available/fusionpbx
+sync {
+    default.rsync,
+    source = "/etc/nginx/sites-available/fusionpbx",
+    target = "root@IP_MASTER:/etc/nginx/sites-available/fusionpbx",
+    rsync = {
+        archive = true,
+        compress = true,
+        verbose = true,
+        whole_file = false,
+    },
+    delay = 15,
+    maxProcesses = 1,
+}
+EOFSTANDBY
+
+# Replace IP_MASTER with actual IP and copy to Standby
+sed "s/IP_MASTER/$ip_master/g" /tmp/lsyncd_standby.conf.lua > /tmp/lsyncd_standby_final.conf.lua
+scp /tmp/lsyncd_standby_final.conf.lua root@$ip_standby:/etc/lsyncd/lsyncd.conf.lua
+rm -f /tmp/lsyncd_standby.conf.lua /tmp/lsyncd_standby_final.conf.lua
+
+echo -e "\e[42m SUCCESS: lsyncd configs created! \e[0m"
+echo -e "  - Master node syncs to: $ip_standby"
+echo -e "  - Standby node syncs to: $ip_master"
+echo -e "  - PCS will start lsyncd only on node with VIP"
 echo -e "*** Done Step 9 ***"
 echo -e "9" > step.txt
 
