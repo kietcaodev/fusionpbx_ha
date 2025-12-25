@@ -165,7 +165,7 @@ case $step in
         start="create_lsyncd_service"
     ;;
     14)
-        start="basebspbx_create_bascul"
+        start="basebs_create_switch_node"
     ;;
     15)
         start="basebspbx_create_role"
@@ -260,6 +260,7 @@ create_lsyncd_config_file:
 echo -e "************************************************************"
 echo -e "*          Configure lsync in Server 1 and 2               *"
 echo -e "************************************************************"
+# Create lsyncd directories on both nodes
 if [ ! -d "/etc/lsyncd" ] ;then
     mkdir /etc/lsyncd
 fi
@@ -268,12 +269,15 @@ if [ ! -d "/var/log/lsyncd" ] ;then
     touch /var/log/lsyncd/lsyncd.{log,status}
 fi
 
-echo -e "Creating lsyncd config on Master node (sync to Standby)..."
+ssh root@$ip_standby "mkdir -p /etc/lsyncd/"
+ssh root@$ip_standby "mkdir -p /var/log/lsyncd/"
+ssh root@$ip_standby "touch /var/log/lsyncd/lsyncd.{log,status}"
+
+echo -e "Creating lsyncd config for Master -> Standby direction..."
 cat > /etc/lsyncd/lsyncd.conf.lua << EOF
 ----
 -- User configuration file for lsyncd.
 -- FusionPBX HA Configuration - Full Sync
--- Node: Master ($ip_master) -> Standby ($ip_standby)
 --
 settings {
     logfile = "/var/log/lsyncd/lsyncd.log",
@@ -287,21 +291,6 @@ sync {
     default.rsync,
     source = "/etc/freeswitch",
     target = "root@$ip_standby:/etc/freeswitch",
-    rsync = {
-        archive = true,
-        compress = true,
-        verbose = true,
-        whole_file = false,
-    },
-    delay = 15,
-    maxProcesses = 1,
-}
-
--- Sync /etc/default/freeswitch
-sync {
-    default.rsync,
-    source = "/etc/default/freeswitch",
-    target = "root@$ip_standby:/etc/default/freeswitch",
     rsync = {
         archive = true,
         compress = true,
@@ -347,21 +336,6 @@ sync {
     default.rsync,
     source = "/usr/lib/freeswitch",
     target = "root@$ip_standby:/usr/lib/freeswitch",
-    rsync = {
-        archive = true,
-        compress = true,
-        verbose = true,
-        whole_file = false,
-    },
-    delay = 15,
-    maxProcesses = 1,
-}
-
--- Sync /usr/bin/freeswitch
-sync {
-    default.rsync,
-    source = "/usr/bin/freeswitch",
-    target = "root@$ip_standby:/usr/bin/freeswitch",
     rsync = {
         archive = true,
         compress = true,
@@ -492,50 +466,13 @@ sync {
     maxProcesses = 1,
 }
 
--- Sync /etc/nginx/sites-enabled/fusionpbx
-sync {
-    default.rsync,
-    source = "/etc/nginx/sites-enabled/fusionpbx",
-    target = "root@$ip_standby:/etc/nginx/sites-enabled/fusionpbx",
-    rsync = {
-        archive = true,
-        compress = true,
-        verbose = true,
-        whole_file = false,
-    },
-    delay = 15,
-    maxProcesses = 1,
-}
-
--- Sync /etc/nginx/sites-available/fusionpbx
-sync {
-    default.rsync,
-    source = "/etc/nginx/sites-available/fusionpbx",
-    target = "root@$ip_standby:/etc/nginx/sites-available/fusionpbx",
-    rsync = {
-        archive = true,
-        compress = true,
-        verbose = true,
-        whole_file = false,
-    },
-    delay = 15,
-    maxProcesses = 1,
-}
-
 EOF
 
-echo -e "Creating lsyncd config on Standby node (sync to Master)..."
-ssh root@$ip_standby "mkdir -p /etc/lsyncd/"
-ssh root@$ip_standby "mkdir -p /var/log/lsyncd/"
-ssh root@$ip_standby "touch /var/log/lsyncd/lsyncd.log"
-ssh root@$ip_standby "touch /var/log/lsyncd/lsyncd.status"
-
-# Create DIFFERENT config for Standby node - sync back to Master
-cat > /tmp/lsyncd_standby.conf.lua << 'EOFSTANDBY'
+echo -e "Creating lsyncd config for Standby -> Master direction (reverse sync)..."
+cat > /tmp/lsyncd_standby.conf.lua << EOF2
 ----
 -- User configuration file for lsyncd.
--- FusionPBX HA Configuration - Full Sync
--- Node: Standby -> Master
+-- FusionPBX HA Configuration - Reverse Sync (Standby to Master)
 --
 settings {
     logfile = "/var/log/lsyncd/lsyncd.log",
@@ -548,22 +485,7 @@ settings {
 sync {
     default.rsync,
     source = "/etc/freeswitch",
-    target = "root@IP_MASTER:/etc/freeswitch",
-    rsync = {
-        archive = true,
-        compress = true,
-        verbose = true,
-        whole_file = false,
-    },
-    delay = 15,
-    maxProcesses = 1,
-}
-
--- Sync /etc/default/freeswitch
-sync {
-    default.rsync,
-    source = "/etc/default/freeswitch",
-    target = "root@IP_MASTER:/etc/default/freeswitch",
+    target = "root@$ip_master:/etc/freeswitch",
     rsync = {
         archive = true,
         compress = true,
@@ -578,7 +500,7 @@ sync {
 sync {
     default.rsync,
     source = "/var/lib/freeswitch",
-    target = "root@IP_MASTER:/var/lib/freeswitch",
+    target = "root@$ip_master:/var/lib/freeswitch",
     rsync = {
         archive = true,
         compress = true,
@@ -593,7 +515,7 @@ sync {
 sync {
     default.rsync,
     source = "/var/log/freeswitch",
-    target = "root@IP_MASTER:/var/log/freeswitch",
+    target = "root@$ip_master:/var/log/freeswitch",
     rsync = {
         archive = true,
         compress = true,
@@ -608,22 +530,7 @@ sync {
 sync {
     default.rsync,
     source = "/usr/lib/freeswitch",
-    target = "root@IP_MASTER:/usr/lib/freeswitch",
-    rsync = {
-        archive = true,
-        compress = true,
-        verbose = true,
-        whole_file = false,
-    },
-    delay = 15,
-    maxProcesses = 1,
-}
-
--- Sync /usr/bin/freeswitch
-sync {
-    default.rsync,
-    source = "/usr/bin/freeswitch",
-    target = "root@IP_MASTER:/usr/bin/freeswitch",
+    target = "root@$ip_master:/usr/lib/freeswitch",
     rsync = {
         archive = true,
         compress = true,
@@ -638,7 +545,7 @@ sync {
 sync {
     default.rsync,
     source = "/usr/share/freeswitch",
-    target = "root@IP_MASTER:/usr/share/freeswitch",
+    target = "root@$ip_master:/usr/share/freeswitch",
     rsync = {
         archive = true,
         compress = true,
@@ -653,7 +560,7 @@ sync {
 sync {
     default.rsync,
     source = "/usr/include/freeswitch",
-    target = "root@IP_MASTER:/usr/include/freeswitch",
+    target = "root@$ip_master:/usr/include/freeswitch",
     rsync = {
         archive = true,
         compress = true,
@@ -668,7 +575,7 @@ sync {
 sync {
     default.rsync,
     source = "/run/freeswitch",
-    target = "root@IP_MASTER:/run/freeswitch",
+    target = "root@$ip_master:/run/freeswitch",
     rsync = {
         archive = true,
         compress = true,
@@ -683,7 +590,7 @@ sync {
 sync {
     default.rsync,
     source = "/etc/fusionpbx",
-    target = "root@IP_MASTER:/etc/fusionpbx",
+    target = "root@$ip_master:/etc/fusionpbx",
     rsync = {
         archive = true,
         compress = true,
@@ -698,7 +605,7 @@ sync {
 sync {
     default.rsync,
     source = "/var/www/fusionpbx",
-    target = "root@IP_MASTER:/var/www/fusionpbx",
+    target = "root@$ip_master:/var/www/fusionpbx",
     rsync = {
         archive = true,
         compress = true,
@@ -713,7 +620,7 @@ sync {
 sync {
     default.rsync,
     source = "/var/cache/fusionpbx",
-    target = "root@IP_MASTER:/var/cache/fusionpbx",
+    target = "root@$ip_master:/var/cache/fusionpbx",
     rsync = {
         archive = true,
         compress = true,
@@ -728,7 +635,7 @@ sync {
 sync {
     default.rsync,
     source = "/var/backups/fusionpbx",
-    target = "root@IP_MASTER:/var/backups/fusionpbx",
+    target = "root@$ip_master:/var/backups/fusionpbx",
     rsync = {
         archive = true,
         compress = true,
@@ -743,7 +650,7 @@ sync {
 sync {
     default.rsync,
     source = "/run/fusionpbx",
-    target = "root@IP_MASTER:/run/fusionpbx",
+    target = "root@$ip_master:/run/fusionpbx",
     rsync = {
         archive = true,
         compress = true,
@@ -754,46 +661,16 @@ sync {
     maxProcesses = 1,
 }
 
--- Sync /etc/nginx/sites-enabled/fusionpbx
-sync {
-    default.rsync,
-    source = "/etc/nginx/sites-enabled/fusionpbx",
-    target = "root@IP_MASTER:/etc/nginx/sites-enabled/fusionpbx",
-    rsync = {
-        archive = true,
-        compress = true,
-        verbose = true,
-        whole_file = false,
-    },
-    delay = 15,
-    maxProcesses = 1,
-}
+EOF2
 
--- Sync /etc/nginx/sites-available/fusionpbx
-sync {
-    default.rsync,
-    source = "/etc/nginx/sites-available/fusionpbx",
-    target = "root@IP_MASTER:/etc/nginx/sites-available/fusionpbx",
-    rsync = {
-        archive = true,
-        compress = true,
-        verbose = true,
-        whole_file = false,
-    },
-    delay = 15,
-    maxProcesses = 1,
-}
-EOFSTANDBY
+# Copy reverse sync config to standby node
+scp /tmp/lsyncd_standby.conf.lua root@$ip_standby:/etc/lsyncd/lsyncd.conf.lua
+rm -f /tmp/lsyncd_standby.conf.lua
 
-# Replace IP_MASTER with actual IP and copy to Standby
-sed "s/IP_MASTER/$ip_master/g" /tmp/lsyncd_standby.conf.lua > /tmp/lsyncd_standby_final.conf.lua
-scp /tmp/lsyncd_standby_final.conf.lua root@$ip_standby:/etc/lsyncd/lsyncd.conf.lua
-rm -f /tmp/lsyncd_standby.conf.lua /tmp/lsyncd_standby_final.conf.lua
-
-echo -e "\e[42m SUCCESS: lsyncd configs created! \e[0m"
-echo -e "  - Master node syncs to: $ip_standby"
-echo -e "  - Standby node syncs to: $ip_master"
-echo -e "  - PCS will start lsyncd only on node with VIP"
+echo -e "\e[42m SUCCESS: Bidirectional lsyncd configuration created! \e[0m"
+echo -e "  - Master syncs TO Standby"
+echo -e "  - Standby syncs TO Master"
+echo -e "  Whichever node runs lsyncd will sync to the other node."
 echo -e "*** Done Step 9 ***"
 echo -e "9" > step.txt
 
@@ -949,11 +826,11 @@ pcs cluster cib-push fs_cfg --config
 echo -e "*** Done Step 14 ***"
 echo -e "14" > step.txt
 
-basebspbx_create_bascul:
+basebs_create_switch_node:
 echo -e "************************************************************"
-echo -e "*         Creating FusionPBX Cluster bascul Command        *"
+echo -e "*         Creating FusionPBX Cluster basebs Command        *"
 echo -e "************************************************************"
-cat > /usr/bin/bascul << 'EOF'
+cat > /usr/bin/basebs << 'EOF'
 #!/bin/bash
 # This code is the property of BasebsPBX LLC Company
 # License: Proprietary
@@ -1048,9 +925,9 @@ fi
 sleep 5
 role
 EOF
-chmod +x /usr/bin/bascul
-scp /usr/bin/bascul root@$ip_standby:/usr/bin/bascul
-ssh root@$ip_standby 'chmod +x /usr/bin/bascul'
+chmod +x /usr/bin/basebs
+scp /usr/bin/basebs root@$ip_standby:/usr/bin/basebs
+ssh root@$ip_standby 'chmod +x /usr/bin/basebs'
 echo -e "*** Done Step 15 ***"
 echo -e "15" > step.txt
 
@@ -1148,7 +1025,7 @@ echo -e "*  sometimes you have to wait about 30 seconds for it to  *"
 echo -e "*  restart completely                                      *"
 echo -e "*                                                          *"
 echo -e "*  Run 'role' command to check cluster status              *"
-echo -e "*  Run 'bascul' command to switch Master/Standby           *"
+echo -e "*  Run 'basebs' command to switch Master/Standby           *"
 echo -e "************************************************************"
 
 pcs resource cleanup
@@ -1160,3 +1037,4 @@ echo -e ""
 echo -e "************************************************************"
 echo -e "*                   Installation Complete!                 *"
 echo -e "************************************************************"
+
