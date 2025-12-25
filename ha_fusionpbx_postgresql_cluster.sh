@@ -421,21 +421,6 @@ sync {
     maxProcesses = 1,
 }
 
--- Sync /var/cache/fusionpbx directory
-sync {
-    default.rsync,
-    source = "/var/cache/fusionpbx",
-    target = "root@$ip_standby:/var/cache/fusionpbx",
-    rsync = {
-        archive = true,
-        compress = true,
-        verbose = true,
-        whole_file = false,
-    },
-    delay = 15,
-    maxProcesses = 1,
-}
-
 -- Sync /var/backups/fusionpbx directory
 sync {
     default.rsync,
@@ -606,21 +591,6 @@ sync {
     default.rsync,
     source = "/var/www/fusionpbx",
     target = "root@$ip_master:/var/www/fusionpbx",
-    rsync = {
-        archive = true,
-        compress = true,
-        verbose = true,
-        whole_file = false,
-    },
-    delay = 15,
-    maxProcesses = 1,
-}
-
--- Sync /var/cache/fusionpbx directory
-sync {
-    default.rsync,
-    source = "/var/cache/fusionpbx",
-    target = "root@$ip_master:/var/cache/fusionpbx",
     rsync = {
         archive = true,
         compress = true,
